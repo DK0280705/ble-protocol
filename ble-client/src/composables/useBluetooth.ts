@@ -41,6 +41,10 @@ export function useBluetooth() {
 
   const MAX_NOTIFICATIONS = 100;
 
+  // ── Permission state ───────────────────────────────────────────────
+
+  const permissionGranted = ref(false);
+
   // ── Support checks ────────────────────────────────────────────────
 
   const bt: Bluetooth | null =
@@ -81,34 +85,38 @@ export function useBluetooth() {
    * not available" unless the user has first granted Bluetooth permission
    * via the device picker prompt.
    */
-  async function ensureBluetoothPermission(): Promise<boolean> {
+  /**
+   * Request Bluetooth permission via requestDevice().
+   * On Android Chrome, requestLEScan() fails unless the user has
+   * first granted Bluetooth permission through the device picker.
+   * Call this once before scanning.
+   */
+  async function requestPermission() {
     try {
-      // First check if adapter is available
+      errorMessage.value = null;
+
       if (navigator.bluetooth.getAvailability) {
         const available = await navigator.bluetooth.getAvailability();
         if (!available) {
           errorMessage.value = 'No Bluetooth adapter found. Please enable Bluetooth.';
           status.value = 'error';
-          return false;
+          return;
         }
       }
 
-      // On Android, we need to trigger the permission prompt via requestDevice.
-      // Use acceptAllDevices with a short interaction to grant permission.
       await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalManufacturerData: [MANUFACTURER_ID],
       });
-      return true;
+      permissionGranted.value = true;
     } catch (err: any) {
-      // User cancelled the device picker — that's OK, permission is still granted
+      // User cancelled the device picker — permission is still granted
       if (err.name === 'NotFoundError') {
-        return true;
+        permissionGranted.value = true;
+        return;
       }
-      // If the user denied or something else went wrong
       errorMessage.value = `Bluetooth permission error: ${err.message || err}`;
       status.value = 'error';
-      return false;
     }
   }
 
@@ -123,11 +131,6 @@ export function useBluetooth() {
 
     try {
       errorMessage.value = null;
-
-      // Request Bluetooth permission first (needed on Android)
-      const granted = await ensureBluetoothPermission();
-      if (!granted) return;
-
       status.value = 'scanning';
       activeMode.value = 'scan';
 
@@ -284,6 +287,7 @@ export function useBluetooth() {
     notifications: readonly(notifications),
     activeMode: readonly(activeMode),
     isSupported: readonly(isSupported),
+    permissionGranted: readonly(permissionGranted),
 
     isScanning,
     supportsScan,
@@ -291,6 +295,7 @@ export function useBluetooth() {
     verifiedCount,
     unverifiedCount,
 
+    requestPermission,
     startScan,
     stopScan,
     startWatch,

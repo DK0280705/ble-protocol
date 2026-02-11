@@ -14,7 +14,7 @@ defineProps<{
       <div class="empty-icon">📡</div>
       <h3>No notifications yet</h3>
       <p v-if="!isScanning">
-        Tap <strong>Pick Device</strong> or <strong>Scan All</strong> to start listening.
+        Tap <strong>Scan All</strong> to start listening.
       </p>
       <p v-else>Scanning for nearby transport beacons…</p>
     </div>

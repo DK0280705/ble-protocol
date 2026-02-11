@@ -12,8 +12,10 @@ const {
   isSupported,
   isScanning,
   supportsScan,
+  permissionGranted,
   verifiedCount,
   unverifiedCount,
+  requestPermission,
   startScan,
   stopScan,
   stopAll,
@@ -36,10 +38,12 @@ const {
         :is-scanning="isScanning"
         :is-supported="isSupported"
         :supports-scan="supportsScan"
+        :permission-granted="permissionGranted"
         :error-message="errorMessage"
         :total-count="notifications.length"
         :verified-count="verifiedCount"
         :unverified-count="unverifiedCount"
+        @request-permission="requestPermission"
         @start-scan="startScan"
         @stop-scan="stopScan"
         @stop-all="stopAll"

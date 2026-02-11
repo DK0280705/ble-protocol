@@ -7,6 +7,7 @@ defineProps<{
   isScanning: boolean;
   isSupported: boolean;
   supportsScan: boolean;
+  permissionGranted: boolean;
   errorMessage: string | null;
   totalCount: number;
   verifiedCount: number;
@@ -14,6 +15,7 @@ defineProps<{
 }>();
 
 defineEmits<{
+  requestPermission: [];
   startScan: [];
   stopScan: [];
   stopAll: [];
@@ -48,7 +50,16 @@ const statusIcon: Record<BleStatus, string> = {
 
     <!-- Big action buttons -->
     <div class="button-group">
-      <template v-if="!isScanning">
+      <template v-if="!permissionGranted">
+        <button
+          class="btn btn-permission"
+          :disabled="!supportsScan"
+          @click="$emit('requestPermission')"
+        >
+          🔓 Allow Bluetooth
+        </button>
+      </template>
+      <template v-else-if="!isScanning">
         <button
           class="btn btn-primary"
           :disabled="!supportsScan"
@@ -144,6 +155,11 @@ const statusIcon: Record<BleStatus, string> = {
 
 .btn-primary {
   background: #3b82f6;
+  color: white;
+}
+
+.btn-permission {
+  background: #f59e0b;
   color: white;
 }
 
