@@ -75,6 +75,43 @@ export function useBluetooth() {
   //  MODE 1 — requestLEScan  (Scanning spec)
   // ══════════════════════════════════════════════════════════════════
 
+  /**
+   * Request Bluetooth permissions by calling requestDevice().
+   * On Android Chrome, requestLEScan() will fail with "Bluetooth adapter
+   * not available" unless the user has first granted Bluetooth permission
+   * via the device picker prompt.
+   */
+  async function ensureBluetoothPermission(): Promise<boolean> {
+    try {
+      // First check if adapter is available
+      if (navigator.bluetooth.getAvailability) {
+        const available = await navigator.bluetooth.getAvailability();
+        if (!available) {
+          errorMessage.value = 'No Bluetooth adapter found. Please enable Bluetooth.';
+          status.value = 'error';
+          return false;
+        }
+      }
+
+      // On Android, we need to trigger the permission prompt via requestDevice.
+      // Use acceptAllDevices with a short interaction to grant permission.
+      await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalManufacturerData: [MANUFACTURER_ID],
+      });
+      return true;
+    } catch (err: any) {
+      // User cancelled the device picker — that's OK, permission is still granted
+      if (err.name === 'NotFoundError') {
+        return true;
+      }
+      // If the user denied or something else went wrong
+      errorMessage.value = `Bluetooth permission error: ${err.message || err}`;
+      status.value = 'error';
+      return false;
+    }
+  }
+
   async function startScan() {
     if (!supportsScan.value) {
       status.value = 'unsupported';
@@ -85,9 +122,14 @@ export function useBluetooth() {
     }
 
     try {
+      errorMessage.value = null;
+
+      // Request Bluetooth permission first (needed on Android)
+      const granted = await ensureBluetoothPermission();
+      if (!granted) return;
+
       status.value = 'scanning';
       activeMode.value = 'scan';
-      errorMessage.value = null;
 
       const scan = await navigator.bluetooth.requestLEScan({
         acceptAllAdvertisements: true,
