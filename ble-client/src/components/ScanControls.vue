@@ -7,7 +7,6 @@ defineProps<{
   isScanning: boolean;
   isSupported: boolean;
   supportsScan: boolean;
-  supportsWatch: boolean;
   errorMessage: string | null;
   totalCount: number;
   verifiedCount: number;
@@ -17,8 +16,6 @@ defineProps<{
 defineEmits<{
   startScan: [];
   stopScan: [];
-  startWatch: [];
-  stopWatch: [];
   stopAll: [];
   clear: [];
 }>();
@@ -40,39 +37,29 @@ const statusIcon: Record<BleStatus, string> = {
 
 <template>
   <div class="scan-controls">
-    <div class="controls-header">
-      <h2>
-        <span class="status-icon">{{ statusIcon[status] }}</span>
-        {{ statusLabel[status] }}
-        <span v-if="activeMode" class="mode-badge">
-          {{ activeMode === 'scan' ? 'requestLEScan' : 'watchAdvertisements' }}
-        </span>
-      </h2>
+    <div class="status-row">
+      <span class="status-icon">{{ statusIcon[status] }}</span>
+      <span class="status-text">{{ statusLabel[status] }}</span>
     </div>
 
-    <!-- Scan mode buttons -->
+    <div v-if="errorMessage" class="error-banner">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Big action buttons -->
     <div class="button-group">
       <template v-if="!isScanning">
         <button
           class="btn btn-primary"
-          :disabled="!supportsWatch"
-          :title="supportsWatch ? 'Main spec: Pick a device and watch its advertisements' : 'requestDevice + watchAdvertisements not available'"
-          @click="$emit('startWatch')"
-        >
-          📱 Pick Device
-        </button>
-        <button
-          class="btn btn-scan"
           :disabled="!supportsScan"
-          :title="supportsScan ? 'Scanning spec: Receive all nearby BLE advertisements (experimental)' : 'requestLEScan not available — enable experimental flag'"
           @click="$emit('startScan')"
         >
-          📡 Scan All
+          📡 Start Scan
         </button>
       </template>
       <template v-else>
         <button class="btn btn-danger" @click="$emit('stopAll')">
-          ⏹ Stop
+          ⏹ Stop Scan
         </button>
       </template>
       <button
@@ -84,15 +71,7 @@ const statusIcon: Record<BleStatus, string> = {
       </button>
     </div>
 
-    <p class="mode-hint">
-      <strong>📱 Pick Device</strong> — Standard API: select a specific broadcaster, then watch its adverts.<br>
-      <strong>📡 Scan All</strong> — Experimental: passively receive all nearby BLE adverts (needs Chrome flag).
-    </p>
-
-    <div v-if="errorMessage" class="error-banner">
-      {{ errorMessage }}
-    </div>
-
+    <!-- Stats -->
     <div class="stats-bar">
       <div class="stat">
         <span class="stat-value">{{ totalCount }}</span>
@@ -114,63 +93,52 @@ const statusIcon: Record<BleStatus, string> = {
 .scan-controls {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
-.controls-header h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.2rem;
+.status-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .status-icon {
-  font-size: 1.4rem;
+  font-size: 1.75rem;
 }
 
-.mode-badge {
-  font-size: 0.7rem;
-  font-weight: 500;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-family: monospace;
+.status-text {
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .button-group {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
-.mode-hint {
-  margin: 0.75rem 0 0;
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
-  line-height: 1.6;
-}
-
 .btn {
-  padding: 0.5rem 1rem;
+  flex: 1;
+  min-width: 0;
+  padding: 1rem 0.75rem;
   border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  border-radius: 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: opacity 0.15s, transform 0.1s;
+  touch-action: manipulation;
 }
 
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -179,17 +147,9 @@ const statusIcon: Record<BleStatus, string> = {
   color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: #2563eb;
-}
-
 .btn-scan {
   background: #8b5cf6;
   color: white;
-}
-
-.btn-scan:hover:not(:disabled) {
-  background: #7c3aed;
 }
 
 .btn-danger {
@@ -197,35 +157,29 @@ const statusIcon: Record<BleStatus, string> = {
   color: white;
 }
 
-.btn-danger:hover:not(:disabled) {
-  background: #dc2626;
-}
-
 .btn-secondary {
   background: var(--color-border);
   color: var(--color-text);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--color-text-muted);
-  color: white;
+  flex: 0 0 auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 
 .error-banner {
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
   background: #fef2f2;
   border: 1px solid #fecaca;
-  border-radius: 8px;
+  border-radius: 12px;
   color: #991b1b;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   line-height: 1.5;
 }
 
 .stats-bar {
   display: flex;
-  gap: 1.5rem;
-  margin-top: 1rem;
+  justify-content: space-around;
+  margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid var(--color-border);
 }
@@ -237,15 +191,16 @@ const statusIcon: Record<BleStatus, string> = {
 }
 
 .stat-value {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 800;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  margin-top: 0.15rem;
 }
 
 .stat-verified .stat-value {
