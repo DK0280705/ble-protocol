@@ -266,14 +266,19 @@ export function useBluetooth() {
 
     if (!notif) return;
 
+    const notifId = formatNotificationId(notif.notificationId);
+
     const existingIdx = notifications.value.findIndex(
-      (n) =>
-        formatNotificationId(n.notificationId) ===
-        formatNotificationId(notif.notificationId),
+      (n) => formatNotificationId(n.notificationId) === notifId,
     );
 
     if (existingIdx >= 0) {
-      notifications.value[existingIdx] = notif;
+      // If already verified, don't update — keep it stable in the list
+      if (notifications.value[existingIdx]?.clientVerified) return;
+      // Only update if the new one is verified (upgrade unverified → verified)
+      if (notif.clientVerified) {
+        notifications.value[existingIdx] = notif;
+      }
     } else {
       notifications.value.unshift(notif);
       if (notifications.value.length > MAX_NOTIFICATIONS) {
