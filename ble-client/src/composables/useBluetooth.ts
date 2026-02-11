@@ -131,13 +131,16 @@ export function useBluetooth() {
 
     try {
       errorMessage.value = null;
-      status.value = 'scanning';
-      activeMode.value = 'scan';
 
+      // requestLEScan MUST be the first async call in the user-gesture
+      // handler, otherwise the browser rejects it as "blocked by user".
       const scan = await navigator.bluetooth.requestLEScan({
         acceptAllAdvertisements: true,
         keepRepeatedDevices: true,
       });
+
+      status.value = 'scanning';
+      activeMode.value = 'scan';
       scanInstance.value = scan;
 
       const handler = (ev: BluetoothAdvertisingEvent) => handleAdvertisement(ev);

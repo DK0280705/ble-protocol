@@ -1,16 +1,21 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { TransportNotification } from '@/protocol/types';
 import NotificationCard from './NotificationCard.vue';
 
-defineProps<{
+const props = defineProps<{
   notifications: readonly TransportNotification[];
   isScanning: boolean;
 }>();
+
+const verifiedNotifications = computed(() =>
+  props.notifications.filter((n) => n.clientVerified),
+);
 </script>
 
 <template>
   <div class="notification-list">
-    <div v-if="notifications.length === 0" class="empty-state">
+    <div v-if="verifiedNotifications.length === 0" class="empty-state">
       <div class="empty-icon">📡</div>
       <h3>No notifications yet</h3>
       <p v-if="!isScanning">
@@ -21,7 +26,7 @@ defineProps<{
 
     <TransitionGroup name="list" tag="div" class="cards" v-else>
       <NotificationCard
-        v-for="notif in notifications"
+        v-for="notif in verifiedNotifications"
         :key="notif.receivedAt + '-' + Array.from(notif.notificationId).join(',')"
         :notification="notif"
       />
